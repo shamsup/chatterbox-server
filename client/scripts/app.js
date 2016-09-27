@@ -76,6 +76,10 @@ var app = (function() {
       data.currentRoom = roomName;
       $('#room-name').text(data.currentRoom);
       $('#chats').empty();
+      if (!data.rooms[roomName]) {
+        data.rooms[roomName] = [];
+        renderRoom(roomName);
+      }
       data.rooms[data.currentRoom].forEach(renderMessage);
       $('#roomSelect li').each(function() {
         if ($('a', this).prop('roomName') === roomName) {
@@ -119,7 +123,7 @@ var app = (function() {
       this.setRoom($(e.target).prop('roomName'));
     }.bind(this));
     this.fetch({ order: '-createdAt', limit: 1000}, ({results}) => {
-      results.forEach(message => {
+      results.reverse().forEach(message => {
         data.messages[message.objectId] = message;
         data.rooms[message.roomname] = data.rooms[message.roomname] || [];
         data.rooms[message.roomname].push(message);
@@ -128,7 +132,7 @@ var app = (function() {
         }
       });
 
-      data.lastReceived = results[0].createdAt;
+      data.lastReceived = results.length ? results[0].createdAt : new Date().toString();
       for (var key in data.rooms) {
         this.renderRoom(key);
       }

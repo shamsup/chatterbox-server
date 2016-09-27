@@ -41,7 +41,10 @@ var requestHandler = function(request, response) {
           order: '-createdAt',
           where: {
             createdAt: {
-              '$gt': '2016-29291438294y3829'
+              '$gt': '2016-29'
+            },
+            username: {
+              '$eq': 'Jono'
             }
           }
         }
@@ -53,17 +56,27 @@ var requestHandler = function(request, response) {
       //decodeURIC
       var queriesObj = {};
       queries = queries.map(item => item.split('='));
-      console.log(queries);
       queries.forEach(element => (
         queriesObj[element[0]] = (element[0] === 'where')
         ? JSON.parse(urlDecode(element[1]))
         : urlDecode(element[1])
       ));
 
-      console.log(queriesObj);
+      var results = messages;
+      if (queriesObj.order) {
+        results = results.sort(function(msgA, msgB) {
+          return (queriesObj.order[0] === '-' ? -1 : 1) * (msgA.createdAt - msgB.createdAt)
+        });
+      }
+      if (queriesObj.where) {
+        results = results.filter(whereFilter(queriesObj.where));
+      }
+      if (queriesObj.limit) {
+        results = results.slice(0, queriesObj.limit);
+      }
 
       var obj = {
-        results: messages
+        results: results
       }
       response.writeHead(statusCode, headers);
       response.end(JSON.stringify(obj));
@@ -141,6 +154,59 @@ var readBody = function(request, callback) {
 var urlDecode = function(str) {
   return decodeURIComponent(str.replace(/\+/g, ' '));
 };
+
+function whereFilter (whereClause) { // {createdAt: {...}, username: {...}, ...}
+  // $eq means equals
+  // $gt means greater than
+  // $gte means greater or equal
+  // $lt means less than
+  // $lte means less or equal
+
+  return function (element, index) {
+    if (!element) return false;
+    var flag = true;
+    for (var key in whereClause) {
+      if(whereClause.hasOwnProperty(key)) {
+        var isDate = false;
+        if (element[key] instanceof Date) {
+          isDate = true;
+        }
+
+        if (whereClause[key].$eq) {
+          flag = !flag ? false : whereClause[key].$eq.toString() === element[key].toString();
+        }
+        if (whereClause[key].$gt) {
+          if (isDate) {
+            whereClause[key].$gt = new Date(whereClause[key].$gt);
+          }
+          flag = !flag ? false : element[key] > whereClause[key].$gt;
+        }
+
+        if (whereClause[key].$gte) {
+          if (isDate) {
+            whereClause[key].$gt = new Date(whereClause[key].$gt);
+          }
+          flag = !flag ? false : element[key] >= whereClause[key].$gte;
+        }
+
+        if (whereClause[key].$lt) {
+          if (isDate) {
+            whereClause[key].$gt = new Date(whereClause[key].$gt);
+          }
+          flag = !flag ? false : element[key] < whereClause[key].$lt;
+        }
+
+        if (whereClause[key].$lte) {
+          if (isDate) {
+            whereClause[key].$gt = new Date(whereClause[key].$gt);
+          }
+          flag = !flag ? false : element[key] <= whereClause[key].$lte;
+        }
+      }
+    }
+    return flag;
+  }
+}
 
 var defaultCorsHeaders = {
   'access-control-allow-origin': '*',
