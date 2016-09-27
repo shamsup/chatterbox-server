@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>chatterbox</title>
+    <link rel="stylesheet" href="styles/materialize.css">
+    <link rel="stylesheet" href="styles/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- dependencies -->
+    <script src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="scripts/materialize.js"></script>
+    <script>
+    // $('#side-menu').sideNav();
+    //   // YOU DO NOT NEED TO EDIT THIS CODE
+    //   if (!/(&|\?)username=/.test(window.location.search)) {
+    //     var newSearch = window.location.search;
+    //     if (newSearch !== '' & newSearch !== '?') {
+    //       newSearch += '&';
+    //     }
+    //     var username = prompt('What is your name?') || 'anonymous';
+    //     newSearch += 'username=' + username;
+    //     window.location.search = newSearch;
+    //   }
+    </script>
+    <!-- your scripts -->
+    <script src="env/config.js"></script>
+    <script src="scripts/app.js"></script>
+    <script>
+      $(document).ready(function() {
+        app.init();
+      });
+    </script>
+  </head>
+  <body>
+    <nav class="main-nav">
+      <div class="nav-wrapper">
+        <a class="brand-logo" href="#">Pwnz0r</a>
+      </div>
+    </nav>
+
+    <div id="main" class="main row">
+      <div class="rooms col s12 m3">
+        <h4>Rooms</h4>
+        <ul id="roomSelect">
+      </ul>
+      </div>
+
+      <div class="chat col s12 m9">
+        <h4 id="room-name"></h4>
+        <ul id="chats" class="messages collection">
+          <!-- messages go here -->
+        </ul>
+        <form id="send" action="?" class="chat-input">
+          <input id="message" type="text" placeholder="chat here" />
+          <button class="submit btn-floating btn-large waves-effect waves-light indigo lighten-1"><i class="material-icons">send</i></button>
+        </form>
+      </div>
+
+    </div>
+    <div id="chats"></div>
+  </body>
+</html>

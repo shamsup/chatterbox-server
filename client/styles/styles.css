@@ -1,0 +1,106 @@
+body {
+  background-color: #eceff1;
+}
+
+html, body, .chat {
+  height: 100%;
+}
+
+.main {
+  height: calc(100vh - 64px);
+  margin-top: 64px;
+}
+
+.main .messages {
+  overflow-y: scroll;
+  height: calc(100% - 204px);
+}
+
+.main > .col {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+nav.main-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #5c6bc0;
+}
+
+.brand-logo {
+  left: 0.75rem;
+}
+
+.messages {
+  list-style: none;
+}
+
+#roomSelect {
+  background-color: #eceff1;
+  border-top: solid 1px lightgray;
+}
+
+#roomSelect li {
+  margin: 0.25rem 0;
+  padding-left: 1rem;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#roomSelect li.selected {
+  background-color: #5c6bc0;
+}
+
+#roomSelect li.selected a {
+  color: white;
+}
+
+#roomSelect a {
+  font-size:1.5rem;
+  line-height:2rem;
+  color: #37474f;
+}
+
+.username i {
+  margin-right: 5px;
+}
+
+.messages .row {
+   padding:0;
+   margin:0;
+}
+
+.material-icons {
+  vertical-align:bottom;
+}
+
+.friended {
+  font-weight: bold;
+}
+
+.friended i {
+  color: #ffd54f;
+}
+
+.chat-input {
+  display: flex;
+  justify-content: space-between;
+}
+
+#message {
+  flex: 2;
+  margin-right: 2rem;
+}
+
+.submit {
+  flex: 0 auto;
+}
+
+input[type=text]:focus:not([readonly]) {
+  border-bottom: 1px solid #5c6bc0;
+  box-shadow: 0 1px 0 0 #5c6bc0;
+}
