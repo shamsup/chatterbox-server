@@ -2,16 +2,9 @@
 var Message = require('./message');
 var Url = require('url');
 
-var messages = [
-  new Message({
-    username: 'Admin',
-    message: 'Testing.',
-    roomname: 'lobby'
-  })
-];
+var messages = [];
 
 var requestHandler = function(request, response) {
-  console.log('Serving request type ' + request.method + ' for url ' + request.url);
   var path = Url.parse(request.url);
   var statusCode = 200;
   var headers = defaultCorsHeaders;
@@ -30,17 +23,55 @@ var requestHandler = function(request, response) {
       response.end();
     } else if(request.method === 'GET') {
       // Handle GET request for messages
-      var queries = path.query.split('&');
+      var queries = (path.query && path.query.split('&')) || [];
+      // equivalent of the line above
+      // if (path.query !== null) {
+      //   queries = path.query.split('&')
+      // } else {
+      //   queries = []
+      // }
+
+      /*
+
+
+
+      ['order=createdAt','where={createdAt}']
+      [['order', 'createdAt'], ['where', '{createdAt: {...}}']]
+        {
+          order: '-createdAt',
+          where: {
+            createdAt: {
+              '$gt': '2016-29291438294y3829'
+            }
+          }
+        }
+
+        var a = (condition ? evaluate if true : evaluate if false)
+      */
+
+
+      //decodeURIC
+      var queriesObj = {};
+      queries = queries.map(item => item.split('='));
       console.log(queries);
+      queries.forEach(element => (
+        queriesObj[element[0]] = (element[0] === 'where')
+        ? JSON.parse(urlDecode(element[1]))
+        : urlDecode(element[1])
+      ));
+
+      console.log(queriesObj);
+
       var obj = {
         results: messages
       }
       response.writeHead(statusCode, headers);
       response.end(JSON.stringify(obj));
+
     } else if(request.method === 'POST') {
       // Handle POST request for new messages
-      readBody(request, function(responseText) {
-        var msg = new Message(JSON.parse(responseText));
+      readBody(request, function(requestText) {
+        var msg = new Message(JSON.parse(requestText));
         messages.push(msg);
         statusCode = 201;
         response.writeHead(statusCode, headers);
@@ -49,20 +80,49 @@ var requestHandler = function(request, response) {
     }
   } else if (path.pathname.match(/^\/classes\/messages\/\d+$/)) {
     var id = path.pathname.match(/^\/classes\/messages\/(\d+)$/)[1]; // => 123
-    if (!messages[id]) {
-      statusCode = 401;
-    } else {
-      statusCode = 200;
+
+    if (request.method === 'PUT') {
+      if (!messages[id]) {
+        statusCode = 404;
+        response.writeHead(statusCode, headers);
+        response.end();
+      } else {
+        statusCode = 200;
+        readBody(request, function(requestText){
+          var updates = JSON.parse(requestText);
+          messages[id].update(updates);
+          response.writeHead(statusCode, headers);
+          response.end(JSON.stringify(messages[id]));
+        });
+      }
+    } else if (request.method === 'GET') {
+      if (!messages[id]) {
+        statusCode = 404;
+        response.writeHead(statusCode, headers);
+        response.end();
+      } else {
+        statusCode = 200;
+        response.writeHead(statusCode, headers);
+        response.end(JSON.stringify(messages[id]));
+      }
+    } else if(request.method === 'DELETE') {
+      if (!messages[id]) {
+        statusCode = 404;
+        response.writeHead(statusCode, headers);
+        response.end();
+      } else {
+        statusCode = 200;
+        response.writeHead(statusCode, headers);
+        messages[id] = undefined;
+        response.end();
+      }
     }
-    response.writeHead(statusCode, headers);
-    response.end(JSON.stringify({results: messages[id]}));
-  }
-  else {
+  } else {
     statusCode = 404;
     headers['Content-Type'] = 'text/plain';
     response.writeHead(statusCode, headers);
     response.end('Hello, World!');
-   }
+  }
 
 
 };
@@ -77,6 +137,10 @@ var readBody = function(request, callback) {
     callback(body);
   });
 }
+
+var urlDecode = function(str) {
+  return decodeURIComponent(str.replace(/\+/g, ' '));
+};
 
 var defaultCorsHeaders = {
   'access-control-allow-origin': '*',

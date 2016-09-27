@@ -97,7 +97,7 @@ describe('Node Server Request Listener Function', function() {
     var messages = JSON.parse(res._data).results;
     expect(messages.length).to.be.above(0);
     expect(messages[0].username).to.equal('Jono');
-    expect(messages[0].message).to.equal('Do my bidding!');
+    expect(messages[0].text).to.equal('Do my bidding!');
     expect(res._ended).to.equal(true);
   });
 
@@ -116,4 +116,58 @@ describe('Node Server Request Listener Function', function() {
       });
   });
 
+  it('Should allow GET requests for a specific message', function() {
+    req = new stubs.request('/classes/messages/0', 'GET');
+    res = new stubs.response();
+    handler.requestHandler(req, res);
+
+    var body = JSON.parse(res._data);
+    expect(res._responseCode).to.equal(200);
+    expect(body.username).to.equal('Jono');
+    expect(body.text).to.equal('Do my bidding!');
+  })
+
+  it('Should 404 when requesting a message that doesn\'t exist', function() {
+    req = new stubs.request('/classes/messages/15', 'GET');
+    res = new stubs.response();
+    handler.requestHandler(req, res);
+
+    expect(res._responseCode).to.equal(404);
+  });
+
+  it('should accept PUT requests for a specific message', function() {
+    var requestParams = {
+      username: 'UpdatedUser',
+      message: 'UpdatedMessage'
+    };
+
+    req = new stubs.request('/classes/messages/0', 'PUT', requestParams);
+    res = new stubs.response();
+    handler.requestHandler(req, res);
+
+    expect(res._responseCode).to.equal(200);
+
+    req = new stubs.request('/classes/messages/0', 'GET');
+    res = new stubs.response();
+    handler.requestHandler(req, res);
+
+    var body = JSON.parse(res._data);
+    expect(res._responseCode).to.equal(200);
+    expect(body.username).to.equal('UpdatedUser');
+    expect(body.text).to.equal('UpdatedMessage');
+
+  });
+
+  it('Should 404 when updating a message that doesn\'t exist', function() {
+    var requestParams = {
+      username: 'UpdatedUser',
+      message: 'UpdatedMessage'
+    };
+
+    req = new stubs.request('/classes/messages/15', 'PUT', requestParams);
+    res = new stubs.response();
+    handler.requestHandler(req, res);
+
+    expect(res._responseCode).to.equal(404);
+  });
 });
