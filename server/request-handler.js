@@ -1,19 +1,57 @@
 
 var Message = require('./message');
+var Util = require('./util');
 var Url = require('url');
+var fs = require('fs');
 
+var mimetypes = {
+  js: 'text/javascript',
+  html: 'text/html',
+  css: 'text/css',
+  json: 'application/json',
+  svg: 'image/svg+xml',
+  ttf: 'application/font-sfnt',
+  otf: 'application/font-sfnt',
+  woff: 'application/font-woff',
+  woff2: 'application/font-woff2',
+  eot: 'application/vnd.ms-fontobject'
+};
 var messages = [];
+
 
 var requestHandler = function(request, response) {
   var path = Url.parse(request.url);
   var statusCode = 200;
-  var headers = defaultCorsHeaders;
+  var headers = Util.defaultCorsHeaders;
   headers['Content-Type'] = 'text/json';
+  if (request.method === 'GET' && (path.pathname === '/' || path.pathname.match(/\.(js|css|html|json|woff2|woff|ttf|otf|svg|eot)$/))) {
+    var f = path.pathname === '/' ? '/index.html' : (path.pathname || '/index.html');
+    f = './client' + f;
+    var extension = f.match(/\.(js|css|html|json|woff2|woff|ttf|otf|svg|eot)$/)[1];
+    var mimetype = mimetypes[extension];
 
-  if(request.method === 'GET' && path.pathname === '/log') {
+    fs.exists(f, function(exists) {
+      if (exists) {
+        fs.readFile(f, function (err, contents) {
+          if (err) {
+            response.writeHead(500, headers);
+            response.end();
+            // 500 die and end
+            return;
+          }
+          headers['Content-Type'] = mimetype;
+          response.writeHead(200, headers);
+          response.end(contents);
+        });
+      } else {
+        response.writeHead(404, headers);
+        response.end();
+      }
+    });
+  } else if (request.method === 'GET' && path.pathname === '/log') {
 
-     response.writeHead(statusCode, headers);
-     response.end('{}');
+    response.writeHead(statusCode, headers);
+    response.end('{}');
 
   } else if (path.pathname === '/classes/messages') {
 
@@ -21,7 +59,7 @@ var requestHandler = function(request, response) {
       // Handle the OPTIONS request for CORS
       response.writeHead(statusCode, headers);
       response.end();
-    } else if(request.method === 'GET') {
+    } else if (request.method === 'GET') {
       // Handle GET request for messages
       var queries = (path.query && path.query.split('&')) || [];
       // equivalent of the line above
@@ -58,18 +96,18 @@ var requestHandler = function(request, response) {
       queries = queries.map(item => item.split('='));
       queries.forEach(element => (
         queriesObj[element[0]] = (element[0] === 'where')
-        ? JSON.parse(urlDecode(element[1]))
-        : urlDecode(element[1])
+        ? JSON.parse(Util.urlDecode(element[1]))
+        : Util.urlDecode(element[1])
       ));
 
       var results = messages;
       if (queriesObj.order) {
         results = results.sort(function(msgA, msgB) {
-          return (queriesObj.order[0] === '-' ? -1 : 1) * (msgA.createdAt - msgB.createdAt)
+          return (queriesObj.order[0] === '-' ? -1 : 1) * (msgA.createdAt - msgB.createdAt);
         });
       }
       if (queriesObj.where) {
-        results = results.filter(whereFilter(queriesObj.where));
+        results = results.filter(Util.whereFilter(queriesObj.where));
       }
       if (queriesObj.limit) {
         results = results.slice(0, queriesObj.limit);
@@ -77,13 +115,13 @@ var requestHandler = function(request, response) {
 
       var obj = {
         results: results
-      }
+      };
       response.writeHead(statusCode, headers);
       response.end(JSON.stringify(obj));
 
-    } else if(request.method === 'POST') {
+    } else if (request.method === 'POST') {
       // Handle POST request for new messages
-      readBody(request, function(requestText) {
+      Util.readBody(request, function(requestText) {
         var msg = new Message(JSON.parse(requestText));
         messages.push(msg);
         statusCode = 201;
@@ -101,7 +139,7 @@ var requestHandler = function(request, response) {
         response.end();
       } else {
         statusCode = 200;
-        readBody(request, function(requestText){
+        Util.readBody(request, function(requestText) {
           var updates = JSON.parse(requestText);
           messages[id].update(updates);
           response.writeHead(statusCode, headers);
@@ -118,7 +156,7 @@ var requestHandler = function(request, response) {
         response.writeHead(statusCode, headers);
         response.end(JSON.stringify(messages[id]));
       }
-    } else if(request.method === 'DELETE') {
+    } else if (request.method === 'DELETE') {
       if (!messages[id]) {
         statusCode = 404;
         response.writeHead(statusCode, headers);
@@ -134,85 +172,11 @@ var requestHandler = function(request, response) {
     statusCode = 404;
     headers['Content-Type'] = 'text/plain';
     response.writeHead(statusCode, headers);
-    response.end('Hello, World!');
+    response.end();
   }
 
 
 };
 
-var readBody = function(request, callback) {
-  var body = [];
-  request.on('data', function(data) {
-    body.push(data.toString());
-  });
-  request.on('end', function() {
-    body = body.join('');
-    callback(body);
-  });
-}
-
-var urlDecode = function(str) {
-  return decodeURIComponent(str.replace(/\+/g, ' '));
-};
-
-function whereFilter (whereClause) { // {createdAt: {...}, username: {...}, ...}
-  // $eq means equals
-  // $gt means greater than
-  // $gte means greater or equal
-  // $lt means less than
-  // $lte means less or equal
-
-  return function (element, index) {
-    if (!element) return false;
-    var flag = true;
-    for (var key in whereClause) {
-      if(whereClause.hasOwnProperty(key)) {
-        var isDate = false;
-        if (element[key] instanceof Date) {
-          isDate = true;
-        }
-
-        if (whereClause[key].$eq) {
-          flag = !flag ? false : whereClause[key].$eq.toString() === element[key].toString();
-        }
-        if (whereClause[key].$gt) {
-          if (isDate) {
-            whereClause[key].$gt = new Date(whereClause[key].$gt);
-          }
-          flag = !flag ? false : element[key] > whereClause[key].$gt;
-        }
-
-        if (whereClause[key].$gte) {
-          if (isDate) {
-            whereClause[key].$gt = new Date(whereClause[key].$gt);
-          }
-          flag = !flag ? false : element[key] >= whereClause[key].$gte;
-        }
-
-        if (whereClause[key].$lt) {
-          if (isDate) {
-            whereClause[key].$gt = new Date(whereClause[key].$gt);
-          }
-          flag = !flag ? false : element[key] < whereClause[key].$lt;
-        }
-
-        if (whereClause[key].$lte) {
-          if (isDate) {
-            whereClause[key].$gt = new Date(whereClause[key].$gt);
-          }
-          flag = !flag ? false : element[key] <= whereClause[key].$lte;
-        }
-      }
-    }
-    return flag;
-  }
-}
-
-var defaultCorsHeaders = {
-  'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'access-control-allow-headers': 'content-type, accept, X-Parse-Application-Id, X-Parse-REST-API-Key',
-  'access-control-max-age': 10 // Seconds.
-};
 
 module.exports.requestHandler = requestHandler;
